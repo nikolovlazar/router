@@ -140,12 +140,6 @@ export function transformStreamWithRouter(
         } else {
           finalPassThrough.write(html)
         }
-
-        return new Promise<void>((resolve) => {
-          setTimeout(() => {
-            resolve()
-          }, 1000)
-        })
       })
       .catch(injectedHtmlDonePromise.reject)
       .finally(() => {
@@ -174,6 +168,7 @@ export function transformStreamWithRouter(
   readStream(appStream, {
     onData: (chunk) => {
       const text = decodeChunk(chunk.value)
+      console.log('#### appStream onData', text)
 
       const chunkString = leftover + text
       const bodyEndMatch = chunkString.match(patternBodyEnd)
