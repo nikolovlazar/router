@@ -8,7 +8,7 @@ title: Server Functions
 Server functions allow you to specify logic that can be invoked almost anywhere (even the client), but run **only** on the server. In fact, they are not so different from an API Route, but with a few key differences:
 
 - They do not have stable public URL (but you'll be able to do this very soon!)
-- They can be called from anywhere in your application, including loaders, hooks, components, etc.
+- They can be called from anywhere in your application, including loaders, hooks, components, etc., but cannot be called from API Routes.
 
 However, they are similar to regular API Routes in that:
 
@@ -38,11 +38,11 @@ Server functions can use middleware to share logic, context, common operations, 
 
 > We'd like to thank the [tRPC](https://trpc.io/) team for both the inspiration of TanStack Start's server function design and guidance while implementing it. We love (and recommend) using tRPC for API Routes so much that we insisted on server functions getting the same 1st class treatment and developer experience. Thank you!
 
-Server functions are defined with the `createServerFn` function, from the `@tanstack/start` package. This function takes an optional `options` argument for specifying the http verb, and allows you to chain off the result to define things like the body of the server function, input validation, middleware, etc. Here's a simple example:
+Server functions are defined with the `createServerFn` function, from the `@tanstack/react-start` package. This function takes an optional `options` argument for specifying configuration like the HTTP method and response type, and allows you to chain off the result to define things like the body of the server function, input validation, middleware, etc. Here's a simple example:
 
 ```tsx
 // getServerTime.ts
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const getServerTime = createServerFn().handler(async () => {
   // Wait for 1 second
@@ -51,6 +51,45 @@ export const getServerTime = createServerFn().handler(async () => {
   return new Date().toISOString()
 })
 ```
+
+### Configuration Options
+
+When creating a server function, you can provide configuration options to customize its behavior:
+
+```tsx
+import { createServerFn } from '@tanstack/react-start'
+
+export const getData = createServerFn({
+  method: 'GET', // HTTP method to use
+  response: 'data', // Response handling mode
+}).handler(async () => {
+  // Function implementation
+})
+```
+
+#### Available Options
+
+**`method`**
+
+Specifies the HTTP method for the server function request:
+
+```tsx
+method?: 'GET' | 'POST'
+```
+
+By default, server functions use `GET` if not specified.
+
+**`response`**
+
+Controls how responses are processed and returned:
+
+```tsx
+response?: 'data' | 'full' | 'raw'
+```
+
+- `'data'` (default): Automatically parses JSON responses and returns just the data
+- `'full'`: Returns a response object with result data, error information, and context
+- `'raw'`: Returns the raw Response object directly, enabling streaming responses and custom headers
 
 ## Where can I call server functions?
 
@@ -79,7 +118,7 @@ Server functions accept a single parameter, which can be a variety of types:
 Here's an example of a server function that accepts a simple string parameter:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const greet = createServerFn({
   method: 'GET',
@@ -107,7 +146,7 @@ Validators also integrate seamlessly with external validators, if you want to us
 Here's a simple example of a server function that validates the input parameter:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 type Person = {
   name: string
@@ -135,7 +174,7 @@ export const greet = createServerFn({ method: 'GET' })
 Validation libraries like Zod can be used like so:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 import { z } from 'zod'
 
@@ -163,7 +202,7 @@ greet({
 Since server-functions cross the network boundary, it's important to ensure the data being passed to them is not only the right type, but also validated at runtime. This is especially important when dealing with user input, as it can be unpredictable. To ensure developers validate their I/O data, types are reliant on validation. The return type of the `validator` function will be the input to the server function's handler.
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 type Person = {
   name: string
@@ -202,7 +241,7 @@ Server functions infer their input, and output types based on the input to the `
 To illustrate this, let's take a look at an example using the `zod` validation library:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 const transactionSchema = z.object({
@@ -227,7 +266,7 @@ createTransaction({
 While we highly recommend using a validation library to validate your network I/O data, you may, for whatever reason _not_ want to validate your data, but still have type safety. To do this, provide type information to the server function using an identity function as the `validator`, that types the input, and or output to the correct types:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 type Person = {
   name: string
@@ -251,7 +290,7 @@ greet({
 Server functions can accept JSON-serializable objects as parameters. This is useful for passing complex data structures to the server:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 type Person = {
   name: string
@@ -277,7 +316,7 @@ greet({
 Server functions can accept `FormData` objects as parameters
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const greetUser = createServerFn({ method: 'POST' })
   .validator((data) => {
@@ -321,7 +360,7 @@ function Test() {
 
 ## Server Function Context
 
-In addition to the single parameter that server functions accept, you can also access server request context from within any server function using utilities from `@tanstack/start/server`. Under the hood, we use [Unjs](https://unjs.io/)'s `h3` package to perform cross-platform HTTP requests.
+In addition to the single parameter that server functions accept, you can also access server request context from within any server function using utilities from `@tanstack/react-start/server`. Under the hood, we use [Unjs](https://unjs.io/)'s `h3` package to perform cross-platform HTTP requests.
 
 There are many context functions available to you for things like:
 
@@ -332,7 +371,7 @@ There are many context functions available to you for things like:
 - Dealing with multi-part form data
 - Reading/Setting custom server context properties
 
-For a full list of available context functions, see all of the available [h3 Methods](https://h3.unjs.io/utils/request) or inspect the [@tanstack/start/server Source Code](https://github.com/tanstack/router/tree/main/packages/start/src/server/index.tsx).
+For a full list of available context functions, see all of the available [h3 Methods](https://h3.unjs.io/utils/request) or inspect the [@tanstack/start-server-core Source Code](https://github.com/TanStack/router/tree/main/packages/start-server-core/src).
 
 For starters, here are a few examples:
 
@@ -341,8 +380,8 @@ For starters, here are a few examples:
 Let's use the `getWebRequest` function to access the request itself from within a server function:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
-import { getWebRequest } from '@tanstack/start/server'
+import { createServerFn } from '@tanstack/react-start'
+import { getWebRequest } from '@tanstack/react-start/server'
 
 export const getServerTime = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -360,8 +399,8 @@ export const getServerTime = createServerFn({ method: 'GET' }).handler(
 Use the `getHeaders` function to access all headers from within a server function:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
-import { getHeaders } from '@tanstack/start/server'
+import { createServerFn } from '@tanstack/react-start'
+import { getHeaders } from '@tanstack/react-start/server'
 
 export const getServerTime = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -381,8 +420,8 @@ export const getServerTime = createServerFn({ method: 'GET' }).handler(
 You can also access individual headers using the `getHeader` function:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
-import { getHeader } from '@tanstack/start/server'
+import { createServerFn } from '@tanstack/react-start'
+import { getHeader } from '@tanstack/react-start/server'
 
 export const getServerTime = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -406,7 +445,7 @@ Server functions can return a few different types of values:
 To return any primitive or JSON-serializable object, simply return the value from the server function:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const getServerTime = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -430,8 +469,8 @@ By default, server functions assume that any non-Response object returned is eit
 To respond with custom headers, you can use the `setHeader` function:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
-import { setHeader } from '@tanstack/start/server'
+import { createServerFn } from '@tanstack/react-start'
+import { setHeader } from '@tanstack/react-start/server'
 
 export const getServerTime = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -446,8 +485,8 @@ export const getServerTime = createServerFn({ method: 'GET' }).handler(
 To respond with a custom status code, you can use the `setResponseStatus` function:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
-import { setResponseStatus } from '@tanstack/start/server'
+import { createServerFn } from '@tanstack/react-start'
+import { setResponseStatus } from '@tanstack/react-start/server'
 
 export const getServerTime = createServerFn({ method: 'GET' }).handler(
   async () => {
@@ -459,25 +498,90 @@ export const getServerTime = createServerFn({ method: 'GET' }).handler(
 
 ## Returning Raw Response objects
 
-To return a raw Response object, simply return a Response object from the server function:
+To return a raw Response object, return a Response object from the server function and set `response: 'raw'`:
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
-export const getServerTime = createServerFn({ method: 'GET' }).handler(
-  async () => {
-    // Read a file from s3
-    return fetch('https://example.com/time.txt')
-  },
-)
+export const getServerTime = createServerFn({
+  method: 'GET',
+  response: 'raw',
+}).handler(async () => {
+  // Read a file from s3
+  return fetch('https://example.com/time.txt')
+})
 ```
+
+The response: 'raw' option also allows for streaming responses among other things:
+
+```tsx
+import { createServerFn } from '@tanstack/react-start'
+
+export const streamEvents = createServerFn({
+  method: 'GET',
+  response: 'raw',
+}).handler(async ({ signal }) => {
+  // Create a ReadableStream to send chunks of data
+  const stream = new ReadableStream({
+    async start(controller) {
+      // Send initial response immediately
+      controller.enqueue(new TextEncoder().encode('Connection established\n'))
+
+      let count = 0
+      const interval = setInterval(() => {
+        // Check if the client disconnected
+        if (signal.aborted) {
+          clearInterval(interval)
+          controller.close()
+          return
+        }
+
+        // Send a data chunk
+        controller.enqueue(
+          new TextEncoder().encode(
+            `Event ${++count}: ${new Date().toISOString()}\n`,
+          ),
+        )
+
+        // End after 10 events
+        if (count >= 10) {
+          clearInterval(interval)
+          controller.close()
+        }
+      }, 1000)
+
+      // Ensure we clean up if the request is aborted
+      signal.addEventListener('abort', () => {
+        clearInterval(interval)
+        controller.close()
+      })
+    },
+  })
+
+  // Return a streaming response
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  })
+})
+```
+
+The `response: 'raw'` option is particularly useful for:
+
+- Streaming APIs where data is sent incrementally
+- Server-sent events
+- Long-polling responses
+- Custom content types and binary data
 
 ## Throwing Errors
 
 Aside from special `redirect` and `notFound` errors, server functions can throw any custom error. These errors will be serialized and sent to the client as a JSON response along with a 500 status code.
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const doStuff = createServerFn({ method: 'GET' }).handler(async () => {
   throw new Error('Something went wrong!')
@@ -493,6 +597,51 @@ function Test() {
     //   message: "Something went wrong!",
     //   stack: "Error: Something went wrong!\n    at doStuff (file:///path/to/file.ts:3:3)"
     // }
+  }
+}
+```
+
+## Cancellation
+
+On the client, server function calls can be cancelled via an `AbortSignal`.
+On the server, an `AbortSignal` will notify if the request closed before execution finished.
+
+```tsx
+import { createServerFn } from '@tanstack/react-start'
+
+export const abortableServerFn = createServerFn().handler(
+  async ({ signal }) => {
+    return new Promise<string>((resolve, reject) => {
+      if (signal.aborted) {
+        return reject(new Error('Aborted before start'))
+      }
+      const timerId = setTimeout(() => {
+        console.log('server function finished')
+        resolve('server function result')
+      }, 1000)
+      const onAbort = () => {
+        clearTimeout(timerId)
+        console.log('server function aborted')
+        reject(new Error('Aborted'))
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    })
+  },
+)
+
+// Usage
+function Test() {
+  const controller = new AbortController()
+  const serverFnPromise = abortableServerFn({
+    signal: controller.signal,
+  })
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  controller.abort()
+  try {
+    const serverFnResult = await serverFnPromise
+    console.log(serverFnResult) // should never get here
+  } catch (error) {
+    console.error(error) // "signal is aborted without reason"
   }
 }
 ```
@@ -517,10 +666,10 @@ export const Route = createFileRoute('/time')({
 
 ## Calling server functions from hooks and components
 
-Server functions can throw `redirect`s or `notFound`s and while not required, it is recommended to catch these errors and handle them appropriately. To make this easier, the `@tanstack/start` package exports a `useServerFn` hook that can be used to bind server functions to components and hooks:
+Server functions can throw `redirect`s or `notFound`s and while not required, it is recommended to catch these errors and handle them appropriately. To make this easier, the `@tanstack/react-start` package exports a `useServerFn` hook that can be used to bind server functions to components and hooks:
 
 ```tsx
-import { useServerFn } from '@tanstack/start'
+import { useServerFn } from '@tanstack/react-start'
 import { useQuery } from '@tanstack/react-query'
 import { getServerTime } from './getServerTime'
 
@@ -554,7 +703,7 @@ To throw a redirect, you can use the `redirect` function exported from the `@tan
 
 ```tsx
 import { redirect } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const doStuff = createServerFn({ method: 'GET' }).handler(async () => {
   // Redirect the user to the home page
@@ -574,7 +723,7 @@ Redirects can also set the status code of the response by passing a `status` opt
 
 ```tsx
 import { redirect } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const doStuff = createServerFn({ method: 'GET' }).handler(async () => {
   // Redirect the user to the home page with a 301 status code
@@ -589,7 +738,7 @@ You can also redirect to an external target using `href`:
 
 ```tsx
 import { redirect } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const auth = createServerFn({ method: 'GET' }).handler(async () => {
   // Redirect the user to the auth provider
@@ -599,7 +748,7 @@ export const auth = createServerFn({ method: 'GET' }).handler(async () => {
 })
 ```
 
-> ⚠️ Do not use `@tanstack/start/server`'s `sendRedirect` function to send soft redirects from within server functions. This will send the redirect using the `Location` header and will force a full page hard navigation on the client.
+> ⚠️ Do not use `@tanstack/react-start/server`'s `sendRedirect` function to send soft redirects from within server functions. This will send the redirect using the `Location` header and will force a full page hard navigation on the client.
 
 ## Redirect Headers
 
@@ -607,7 +756,7 @@ You can also set custom headers on a redirect by passing a `headers` option:
 
 ```tsx
 import { redirect } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const doStuff = createServerFn({ method: 'GET' }).handler(async () => {
   // Redirect the user to the home page with a custom header
@@ -628,7 +777,7 @@ To throw a notFound, you can use the `notFound` function exported from the `@tan
 
 ```tsx
 import { notFound } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 const getStuff = createServerFn({ method: 'GET' }).handler(async () => {
   // Randomly return a not found error
@@ -660,7 +809,7 @@ Not found errors are a core feature of TanStack Router,
 If a server function throws a (non-redirect/non-notFound) error, it will be serialized and sent to the client as a JSON response along with a 500 status code. This is useful for debugging, but you may want to handle these errors in a more user-friendly way. You can do this by catching the error and handling it in your route lifecycle, component, or hook as you normally would.
 
 ```tsx
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 export const doStuff = createServerFn({ method: 'GET' }).handler(async () => {
   undefined.foo()
@@ -690,8 +839,8 @@ with [the HTML attribute `action`](https://developer.mozilla.org/en-US/docs/Web/
 > Notice that we mentioned the **HTML** attribute `action`. This attribute only accepts a string in HTML, just like all
 > other attributes.
 >
-> While React
-> 19 [added support for passing a function to `action`](https://react.dev/reference/react-dom/components/form#form),
+> While React 19
+> [added support for passing a function to `action`](https://react.dev/reference/react-dom/components/form#form),
 > it's
 > a React-specific feature and not part of the HTML standard.
 
@@ -806,7 +955,7 @@ all by telling the browser to reload the current page with new data piped throug
 ```tsx
 import * as fs from 'fs'
 import { createFileRoute } from '@tanstack/react-router'
-import { createServerFn } from '@tanstack/start'
+import { createServerFn } from '@tanstack/react-start'
 
 const filePath = 'count.txt'
 

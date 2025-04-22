@@ -5,13 +5,13 @@ import { fileURLToPath } from 'node:url'
 import viteReact from '@vitejs/plugin-react'
 import { resolve } from 'import-meta-resolve'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
-import { TanStackStartVitePlugin } from '@tanstack/start-plugin'
 import { getConfig } from '@tanstack/router-generator'
 import { createApp } from 'vinxi'
 import { config } from 'vinxi/plugins/config'
 // // @ts-expect-error
 // import { serverComponents } from '@vinxi/server-components/plugin'
 import { createTanStackServerFnPlugin } from '@tanstack/server-functions-plugin'
+import { createTanStackStartPlugin } from '@tanstack/react-start-plugin'
 import { createFetch } from 'ofetch'
 import { createNitro } from 'nitropack'
 import { tanstackStartVinxiFileRouter } from './vinxi-file-router.js'
@@ -110,7 +110,9 @@ export async function defineConfig(
   const ssrEntry =
     opts.routers?.ssr?.entry || path.join(appDirectory, 'ssr.tsx')
   const apiEntry = opts.routers?.api?.entry || path.join(appDirectory, 'api.ts')
-
+  const globalMiddlewareEntry =
+    opts.routers?.server?.globalMiddlewareEntry ||
+    path.join(appDirectory, 'global-middleware.ts')
   const apiEntryExists = existsSync(apiEntry)
 
   const viteConfig = getUserViteConfig(opts.vite)
@@ -136,6 +138,10 @@ export async function defineConfig(
       replacer: (opts) =>
         `createServerRpc('${opts.functionId}', '${serverBase}', ${opts.fn})`,
     },
+  })
+
+  const TanStackStartPlugin = createTanStackStartPlugin({
+    globalMiddlewareEntry,
   })
 
   // Create a dummy nitro app to get the resolved public output path
@@ -211,13 +217,12 @@ export async function defineConfig(
               ...tsrConfig,
               enableRouteGeneration: true,
               autoCodeSplitting: true,
+              __enableAPIRoutesGeneration: true,
               experimental: {
                 ...tsrConfig.experimental,
               },
             }),
-            TanStackStartVitePlugin({
-              env: 'client',
-            }),
+            TanStackStartPlugin.client,
             TanStackServerFnsPlugin.client,
             ...(viteConfig.plugins || []),
             ...(clientViteConfig.plugins || []),
@@ -276,13 +281,12 @@ export async function defineConfig(
               ...tsrConfig,
               enableRouteGeneration: false,
               autoCodeSplitting: true,
+              __enableAPIRoutesGeneration: true,
               experimental: {
                 ...tsrConfig.experimental,
               },
             }),
-            TanStackStartVitePlugin({
-              env: 'ssr',
-            }),
+            TanStackStartPlugin.ssr,
             TanStackServerFnsPlugin.ssr,
             tsrRoutesManifest({
               tsrConfig,
@@ -344,13 +348,12 @@ export async function defineConfig(
               ...tsrConfig,
               enableRouteGeneration: false,
               autoCodeSplitting: true,
+              __enableAPIRoutesGeneration: true,
               experimental: {
                 ...tsrConfig.experimental,
               },
             }),
-            TanStackStartVitePlugin({
-              env: 'server',
-            }),
+            TanStackStartPlugin.server,
             TanStackServerFnsPlugin.server,
             // TODO: RSCS - remove this
             // resolve: {
@@ -379,15 +382,16 @@ export async function defineConfig(
 
   const noExternal = [
     '@tanstack/start',
-    '@tanstack/start/server',
-    '@tanstack/start-client',
-    '@tanstack/start-server',
+    '@tanstack/react-start',
+    '@tanstack/react-start/server',
+    '@tanstack/react-start-client',
+    '@tanstack/react-start-server',
     '@tanstack/start-server-functions-fetcher',
     '@tanstack/start-server-functions-handler',
     '@tanstack/start-server-functions-client',
     '@tanstack/start-server-functions-ssr',
     '@tanstack/start-server-functions-server',
-    '@tanstack/start-router-manifest',
+    '@tanstack/react-start-router-manifest',
     '@tanstack/start-config',
     '@tanstack/start-api-routes',
     '@tanstack/server-functions-plugin',
@@ -438,6 +442,7 @@ export async function defineConfig(
             ...tsrConfig,
             enableRouteGeneration: false,
             autoCodeSplitting: true,
+            __enableAPIRoutesGeneration: true,
             experimental: {
               ...tsrConfig.experimental,
             },

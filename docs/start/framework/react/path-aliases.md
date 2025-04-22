@@ -12,13 +12,13 @@ By default, TanStack Start does not include path aliases. However, you can easil
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "~/*": ["app/*"]
+      "~/*": ["./src/*"]
     }
   }
 }
 ```
 
-In this example, we've defined the path alias `~/*` that maps to the `app/*` directory. This means that you can now import files from the `app` directory using the `~` prefix.
+In this example, we've defined the path alias `~/*` that maps to the `./src/*` directory. This means that you can now import files from the `src` directory using the `~` prefix.
 
 After updating your `tsconfig.json` file, you'll need to install the `vite-tsconfig-paths` plugin to enable path aliases in your TanStack Start project. You can do this by running the following command:
 
@@ -30,7 +30,7 @@ Now, you'll need to update your `app.config.ts` file to include the following:
 
 ```ts
 // app.config.ts
-import { defineConfig } from '@tanstack/start/config'
+import { defineConfig } from '@tanstack/react-start/config'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({

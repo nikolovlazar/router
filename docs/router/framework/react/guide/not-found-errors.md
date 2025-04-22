@@ -171,32 +171,32 @@ If neither the route nor any suitable parent route is found to handle the error,
 Sometimes you may want to trigger a not-found on a specific parent route and bypass the normal not-found component propagation. To do this, pass in a route id to the `route` option in the `notFound` function.
 
 ```tsx
-// _layout.tsx
-export const Route = createFileRoute('/_layout')({
+// _pathlessLayout.tsx
+export const Route = createFileRoute('/_pathlessLayout')({
   // This will render
   notFoundComponent: () => {
-    return <p>Not found (in _layout)</p>
+    return <p>Not found (in _pathlessLayout)</p>
   },
   component: () => {
     return (
       <div>
-        <p>This is a layout!</p>
+        <p>This is a pathless layout route!</p>
         <Outlet />
       </div>
     )
   },
 })
 
-// _layout/a.tsx
-export const Route = createFileRoute('/_layout/a')({
+// _pathlessLayout/route-a.tsx
+export const Route = createFileRoute('/_pathless/route-a')({
   loader: async () => {
     // This will make LayoutRoute handle the not-found error
-    throw notFound({ routeId: '/_layout' })
+    throw notFound({ routeId: '/_pathlessLayout' })
     //                      ^^^^^^^^^ This will autocomplete from the registered router
   },
   // This WILL NOT render
   notFoundComponent: () => {
-    return <p>Not found (in _layout/a)</p>
+    return <p>Not found (in _pathlessLayout/route-a)</p>
   },
 })
 ```
@@ -270,7 +270,32 @@ The main differences are:
 - When using `NotFoundRoute`, you can't use layouts. `notFoundComponent` can be used with layouts.
 - When using `notFoundComponent`, path matching is strict. This means that if you have a route at `/post/$postId`, a not-found error will be thrown if you try to access `/post/1/2/3`. With `NotFoundRoute`, `/post/1/2/3` would match the `NotFoundRoute` and only render it if there is an `<Outlet>`.
 
-To migrate from `NotFoundRoute` to `notFoundComponent`, follow these steps:
+To migrate from `NotFoundRoute` to `notFoundComponent`, you'll just need to make a few changes:
 
-- Replace `NotFoundRoute` with `notFoundComponent`s on the routes that need to handle not-found errors. For "global" not-found errors, attach a `notFoundComponent` to the root route.
-- Remove `<Outlet>`s from the routes that used `NotFoundRoute`.
+```tsx
+// router.tsx
+import { createRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen.'
+- import { notFoundRoute } from './notFoundRoute'  // [!code --]
+
+export const router = createRouter({
+  routeTree,
+- notFoundRoute // [!code --]
+})
+
+// routes/__root.tsx
+import { createRootRoute } from '@tanstack/react-router'
+
+export const Route = createRootRoute({
+  // ...
++ notFoundComponent: () => {  // [!code ++]
++   return <p>Not found!</p>  // [!code ++]
++ } // [!code ++]
+})
+```
+
+Important changes:
+
+- A `notFoundComponent` is added to the root route for global not-found handling.
+  - You can also add a `notFoundComponent` to any other route in your route tree to handle not-found errors for that specific route.
+- The `notFoundComponent` does not support rendering an `<Outlet>`.

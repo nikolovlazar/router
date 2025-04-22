@@ -1,4 +1,4 @@
-import { defineEventHandler, toWebRequest } from '@tanstack/start/server'
+import { defineEventHandler, toWebRequest } from '@tanstack/react-start/server'
 import { initTRPC } from '@trpc/server'
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch'
 
@@ -33,6 +33,9 @@ export type AppRouter = typeof appRouter
 
 export default defineEventHandler((event) => {
   const request = toWebRequest(event)
+  if (!request) {
+    return new Response('No request', { status: 400 })
+  }
 
   return fetchRequestHandler({
     endpoint: '/trpc',
